@@ -1,0 +1,135 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f0f13;
+  color: #e8e8e8;
+  min-height: 100vh;
+}
+
+.app { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+
+/* Header */
+.header { text-align: center; margin-bottom: 2.5rem; }
+.header h1 { font-size: 2.2rem; font-weight: 700; color: #fff; }
+.subtitle   { color: #888; margin-top: 0.5rem; font-size: 0.95rem; }
+
+/* Search Bar */
+.search-input-wrapper {
+  display: flex; align-items: center; gap: 0.75rem;
+  background: #1c1c24; border: 1px solid #2e2e3e;
+  border-radius: 12px; padding: 0.75rem 1rem;
+  transition: border-color 0.2s;
+}
+.search-input-wrapper:focus-within { border-color: #6c63ff; }
+.search-icon  { color: #666; flex-shrink: 0; }
+.search-input {
+  flex: 1; background: transparent; border: none;
+  outline: none; color: #e8e8e8; font-size: 1rem;
+}
+.search-input::placeholder { color: #555; }
+.search-button {
+  background: #6c63ff; color: white; border: none;
+  padding: 0.5rem 1.25rem; border-radius: 8px;
+  cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  transition: background 0.2s; white-space: nowrap;
+}
+.search-button:hover:not(:disabled) { background: #5a52e0; }
+.search-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Mode Toggle */
+.mode-toggle {
+  display: flex; gap: 0.75rem; margin: 1.25rem 0;
+  flex-wrap: wrap;
+}
+.mode-btn {
+  display: flex; flex-direction: column; align-items: flex-start;
+  background: #1c1c24; border: 1px solid #2e2e3e;
+  border-radius: 10px; padding: 0.6rem 1rem;
+  cursor: pointer; transition: all 0.2s; color: #e8e8e8;
+}
+.mode-btn:hover  { border-color: #6c63ff; }
+.mode-btn.active { border-color: #6c63ff; background: #1e1b3a; }
+.mode-label { font-size: 0.9rem; font-weight: 600; }
+.mode-desc  { font-size: 0.75rem; color: #888; margin-top: 2px; }
+
+/* Top K Control */
+.top-k-control {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 1rem; color: #888; font-size: 0.9rem;
+}
+.top-k-control input { accent-color: #6c63ff; }
+
+/* Stats Bar */
+.stats-bar {
+  background: #1c1c24; border: 1px solid #2e2e3e;
+  border-radius: 8px; padding: 0.6rem 1rem;
+  font-size: 0.85rem; color: #888; margin-bottom: 1.25rem;
+}
+
+/* Error */
+.error-banner {
+  background: #2a1a1a; border: 1px solid #5a2a2a;
+  color: #ff6b6b; padding: 0.75rem 1rem;
+  border-radius: 8px; margin-bottom: 1rem;
+}
+
+/* Loading */
+.loading {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 1rem; padding: 3rem;
+  color: #888;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #2e2e3e;
+  border-top-color: #6c63ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Results Grid */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* Result Card */
+.result-card {
+  display: flex; gap: 0.75rem;
+  background: #1c1c24; border: 1px solid #2e2e3e;
+  border-radius: 12px; padding: 1rem;
+  transition: border-color 0.2s;
+}
+.result-card:hover { border-color: #6c63ff; }
+.card-rank {
+  font-size: 0.8rem; color: #555; font-weight: 700;
+  min-width: 24px;
+}
+.card-name      { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+.card-cuisines  { font-size: 0.85rem; color: #888; margin-bottom: 0.5rem; }
+.card-footer    { display: flex; justify-content: space-between; align-items: center; }
+.stars          { color: #f5a623; font-size: 0.8rem; }
+.rating-num     { color: #888; font-size: 0.8rem; margin-left: 0.25rem; }
+.card-location  { font-size: 0.8rem; color: #666; }
+
+/* Comparison View */
+.comparison-header  { margin-bottom: 1.25rem; color: #888; font-size: 0.9rem; }
+.comparison-grid    {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+@media (max-width: 700px) { .comparison-grid { grid-template-columns: 1fr; } }
+
+.col-header {
+  display: flex; flex-direction: column;
+  font-weight: 700; font-size: 1rem;
+  padding: 0.75rem 1rem; border-radius: 10px;
+  margin-bottom: 0.75rem;
+}
+.col-subtitle     { font-size: 0.8rem; font-weight: 400; margin-top: 0.2rem; opacity: 0.8; }
+.keyword-header   { background: #1a2a1a; color: #6bcf7f; }
+.semantic-header  { background: #1a1a2e; color: #6c63ff; }
+
+.empty-state { text-align: center; padding: 3rem; color: #555; }

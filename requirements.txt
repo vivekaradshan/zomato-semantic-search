@@ -1,0 +1,23 @@
+# Spark + Delta Lake
+pyspark==3.5.3
+delta-spark==3.2.0
+
+# Embeddings
+openai==1.79.0
+
+# OpenSearch client
+opensearch-py==2.4.2
+
+# API
+python-dotenv>=1.0.0
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# Data
+pandas==2.2.2
+numpy==1.26.4
+kaggle==1.6.12
+
+# Notebooks
+jupyter==1.0.0
+ipykernel==6.29.4

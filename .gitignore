@@ -1,0 +1,29 @@
+# Environment
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Delta Lake — large binary data, not for git
+delta_lake/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Node
+ui/node_modules/
+ui/dist/
+
+# macOS
+.DS_Store
+
+# Data files — large CSVs
+data/*.csv
+data/*.zip
+data/zomato restaurants data/
