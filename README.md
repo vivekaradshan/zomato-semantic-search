@@ -1,101 +1,151 @@
 # Zomato Semantic Restaurant Search
 
-End-to-end semantic search system built on local PySpark (Databricks-compatible), Delta Lake, OpenSearch, and FastAPI.
+A restaurant search engine that understands natural language — *"something warm and crispy on a rainy evening in Chennai"* returns South Indian snack places, not Italian desserts.
+
+Built with PySpark, Delta Lake, OpenSearch, FastAPI, and React.
+
+---
 
 ## Architecture
 
 ```
-Raw CSV (Kaggle)
-     ↓
-Local PySpark (mirrors Databricks)
-     ↓
-HuggingFace Sentence Transformers (all-MiniLM-L6-v2, 384 dims)
-     ↓
-Local Delta Lake (Parquet + transaction log)
-     ↓
-OpenSearch in Docker (HNSW kNN index)
-     ↓
-FastAPI  ←→  React UI
+zomato_with_dynamic_menu.csv
+         ↓
+  PySpark (01_data_prep)
+  Clean + build text_for_embedding
+  (name | cuisines | price tier | city | menu items)
+         ↓
+  Delta Lake  ──  raw/restaurants
+         ↓
+  OpenAI text-embedding-3-small (02_embeddings)
+  1024-dim vectors per restaurant
+         ↓
+  Delta Lake  ──  embeddings/restaurants
+         ↓
+  OpenSearch in Docker (03_ingestion)
+  HNSW kNN index (nmslib engine)
+         ↓
+  FastAPI  ←→  React UI
 ```
+
+### Query Pipeline
+
+```
+User query: "It's raining in Chennai, I want something warm"
+         ↓
+  GPT-4o-mini (query rewriting)
+  → food_terms: "bajji bonda vada pakoda hot snacks chai South Indian"
+  → location: "Chennai"
+         ↓
+  OpenAI text-embedding-3-small
+  → 1024-dim query vector
+         ↓
+  OpenSearch
+  Pre-filter by location → rank by cosine similarity
+         ↓
+  Results: South Indian snack restaurants in Chennai
+```
+
+---
 
 ## Project Structure
 
 ```
-semantic-search/
-├── docker-compose.yml          # OpenSearch + Dashboards
+restaurant-semantic-search/
+├── docker-compose.yml              # OpenSearch + Dashboards
 ├── requirements.txt
+├── .env                            # OPENAI_API_KEY (never commit)
 ├── data/
-│   └── zomato.csv              # Kaggle dataset (add manually)
+│   └── zomato_with_dynamic_menu.csv
 ├── notebooks/
-│   ├── 01_data_prep.ipynb      # PySpark cleaning → Delta Lake
-│   ├── 02_embeddings.ipynb     # Vector generation → Delta Lake
-│   └── 03_ingestion.ipynb      # Delta Lake → OpenSearch
+│   ├── 01_data_prep.ipynb          # PySpark cleaning → Delta Lake
+│   ├── 02_embeddings.ipynb         # OpenAI embeddings → Delta Lake
+│   └── 03_ingestion.ipynb          # Delta Lake → OpenSearch
 ├── delta_lake/
-│   ├── raw/                    # Cleaned restaurant data
-│   └── embeddings/             # Vectors + metadata
+│   ├── raw/                        # Cleaned restaurant data
+│   └── embeddings/                 # Vectors + metadata
 ├── api/
-│   └── main.py                 # FastAPI (semantic / keyword / hybrid)
-└── ui/                         # React frontend (separate setup)
+│   └── main.py                     # FastAPI — semantic / keyword / hybrid
+└── ui/                             # React + Vite frontend
+    └── src/
+        ├── components/             # SearchBar, ResultCard, ComparisonView
+        ├── hooks/useSearch.js
+        └── api/searchApi.js
 ```
+
+---
 
 ## Setup
 
 ### Prerequisites
 
-- Python 3.10+
-- Java 11 (required by Spark) — `brew install openjdk@11`
-- Docker Desktop (give it ≥ 6 GB RAM)
+- Python 3.12
+- Java 17 — `brew install openjdk@17`
+- Docker Desktop (allocate ≥ 6 GB RAM)
+- OpenAI API key
 
-### 1. Environment
+### 1. Virtual environment
 
 ```bash
-python -m venv .venv
+uv venv .venv --python 3.12
 source .venv/bin/activate
-pip install -r requirements.txt
+uv pip install -r requirements.txt
+python -m ipykernel install --user --name restaurant-search --display-name "Restaurant Search (3.12)"
 ```
 
-Add to `~/.zshrc`:
+### 2. API key
 
-```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 11)
-export PYSPARK_PYTHON=python3
+Create a `.env` file in the project root:
+
+```
+OPENAI_API_KEY=sk-...
 ```
 
-### 2. Start OpenSearch
+### 3. Start OpenSearch
 
 ```bash
 docker-compose up -d
 ```
 
-- OpenSearch API: http://localhost:9200
-- OpenSearch Dashboards: http://localhost:5601
-
-### 3. Get the dataset
-
-```bash
-kaggle datasets download -d shrutimehta/zomato-restaurants-data
-unzip zomato-restaurants-data.zip -d data/
-```
+| Service | URL |
+|---------|-----|
+| OpenSearch API | http://localhost:9200 |
+| OpenSearch Dashboards | http://localhost:5601 |
 
 ### 4. Run notebooks in order
 
 ```bash
-jupyter notebook notebooks/
+jupyter lab
 ```
 
-| Notebook | What it does | Typical runtime |
-|----------|-------------|-----------------|
-| `01_data_prep` | Clean CSV → Delta Lake | ~2 min |
-| `02_embeddings` | Generate 384-dim vectors → Delta Lake | ~1-2 hr (full), ~5 min (50K sample) |
-| `03_ingestion` | Bulk load into OpenSearch | ~5-15 min |
+| Notebook | What it does |
+|----------|-------------|
+| `01_data_prep` | Clean CSV → Delta Lake |
+| `02_embeddings` | Generate 1024-dim vectors via OpenAI → Delta Lake |
+| `03_ingestion` | Bulk load into OpenSearch HNSW index |
+
+> `02_embeddings` runs on a 50K sample by default (`SAMPLE = True`). Cost ≈ $0.03. Set `SAMPLE = False` for the full dataset ≈ $0.30.
 
 ### 5. Start the API
 
 ```bash
-uvicorn api.main:app --reload --port 8000
+# Run from project root so .env is loaded
+uvicorn api.main:app --reload
 ```
 
 Interactive docs: http://localhost:8000/docs
+
+### 6. Start the React UI
+
+```bash
+cd ui
+npm install
+npm run dev
+```
+
+Open http://localhost:5173
+
+---
 
 ## API Reference
 
@@ -107,35 +157,56 @@ All search endpoints accept:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/search/semantic` | POST | kNN vector search |
-| `/search/keyword`  | POST | BM25 full-text search |
-| `/search/hybrid`   | POST | 70% semantic + 30% keyword |
-| `/health`          | GET  | Liveness check |
+| `/search/semantic` | POST | GPT rewrite → kNN vector search |
+| `/search/keyword` | POST | GPT location extract → BM25 full-text |
+| `/search/hybrid` | POST | 70% semantic + 30% keyword |
+| `/health` | GET | Liveness check |
 
-## Ingestion Tuning Results
+---
 
-Varying `BATCH_SIZE` in `03_ingestion.ipynb` (fill in your results):
+## Search Modes
 
-| batch_size | elapsed (s) | docs/s |
-|-----------|------------|--------|
-| 100       |            |        |
-| 500       |            |        |
-| 1000      |            |        |
-| 2000      |            |        |
+| Mode | How it works | Best for |
+|------|-------------|---------|
+| **Semantic** | Rewrites query with GPT → embeds → cosine similarity | Mood, occasion, vibe queries |
+| **Keyword** | BM25 exact term matching + location filter | Restaurant name, specific cuisine |
+| **Hybrid** | 70% semantic + 30% keyword | General use |
+| **Compare** | Side-by-side semantic vs keyword | Demos, understanding the difference |
 
-## HNSW Parameters
+---
+
+## HNSW Index Parameters
 
 | Parameter | Value | Effect |
 |-----------|-------|--------|
+| `engine` | `nmslib` | Supports vectors up to 16k dims |
 | `m` | 16 | Connections per node — higher = better recall, more memory |
 | `ef_construction` | 128 | Build-time candidate list — higher = better graph, slower build |
-| `ef_search` | 100 | Query-time candidate list — tune without rebuilding |
+| `ef_search` | 100 | Query-time candidate list — tunable without rebuilding |
+| `space_type` | `cosinesimil` | Cosine similarity for text embeddings |
 
-## Environment Variables (API)
+---
+
+## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `OPENAI_API_KEY` | — | Required. Set in `.env` |
 | `OPENSEARCH_HOST` | `localhost` | OpenSearch hostname |
 | `OPENSEARCH_PORT` | `9200` | OpenSearch port |
 | `INDEX_NAME` | `restaurants` | Index name |
-| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence Transformers model |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | OpenAI embedding model |
+
+---
+
+## Test Queries
+
+These queries demonstrate semantic search over keyword search:
+
+| Query | What semantic finds |
+|-------|-------------------|
+| `It's raining in Chennai, I want something warm` | South Indian snack places — bajji, bonda, vada |
+| `First date, not too expensive, Mumbai` | Mid-range romantic Continental/North Indian |
+| `Sunday morning lazy breakfast with family` | Breakfast cafes, South Indian tiffin |
+| `Something light after a long day` | Salads, soups, juices, light Continental |
+| `Quick lunch under 200 in Bangalore` | Budget tiffin, darshini, fast casual |
